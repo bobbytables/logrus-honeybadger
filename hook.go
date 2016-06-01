@@ -16,12 +16,20 @@ func (ik IgnoredKeys) Add(keys ...string) {
 	}
 }
 
+// DefaultIgnoredKeys are sane defaults for keys to ignore when sending context
+// to honeybadger
+var DefaultIgnoredKeys = IgnoredKeys{
+	"error": struct{}{},
+}
+
 // Hook handles sending errors to honeybadger via logrus hooks
 type Hook struct {
 	Client      *honeybadger.Client
 	IgnoredKeys IgnoredKeys
 }
 
+// NewHook initializes a hook and sets the ignored keys to whatever
+// DefaultIgnoredKeys contains.
 func NewHook(c *honeybadger.Client) *Hook {
 	ik := IgnoredKeys{}
 	for k, v := range DefaultIgnoredKeys {
@@ -32,12 +40,6 @@ func NewHook(c *honeybadger.Client) *Hook {
 		Client:      c,
 		IgnoredKeys: ik,
 	}
-}
-
-// DefaultIgnoredKeys are sane defaults for keys to ignore when sending context
-// to honeybadger
-var DefaultIgnoredKeys = IgnoredKeys{
-	"error": struct{}{},
 }
 
 // Fire implements logrus.Hook
