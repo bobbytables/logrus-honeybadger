@@ -34,7 +34,7 @@ func (tb *testBackend) Notify(f honeybadger.Feature, p honeybadger.Payload) erro
 }
 
 func TestHookDispatchesToHoneybadger(t *testing.T) {
-	b, c, l := setup()
+	b, c, l, _ := setup()
 
 	l.Error("this is an error")
 	c.Flush()
@@ -45,7 +45,7 @@ func TestHookDispatchesToHoneybadger(t *testing.T) {
 }
 
 func TestHookWithErrorDispatchesToHoneybadger(t *testing.T) {
-	b, c, l := setup()
+	b, c, l, _ := setup()
 
 	l.WithError(fmt.Errorf("yo crap dun broke")).Error("this is an error")
 	c.Flush()
@@ -56,7 +56,7 @@ func TestHookWithErrorDispatchesToHoneybadger(t *testing.T) {
 }
 
 func TestHookWithFieldsIncludesContextToHoneybadger(t *testing.T) {
-	b, c, l := setup()
+	b, c, l, _ := setup()
 
 	l.WithFields(logrus.Fields{"host": "paperwalls", "user": "bobbytables"}).Error("this is an error")
 	c.Flush()
@@ -69,17 +69,32 @@ func TestHookWithFieldsIncludesContextToHoneybadger(t *testing.T) {
 	assert.Empty(t, notice.Context["error"])
 }
 
+func TestHookIgnoresKeysWhenSendingToHoneybadger(t *testing.T) {
+	b, c, l, h := setup()
+	h.IgnoredKeys.Add("host")
+
+	l.WithFields(logrus.Fields{"host": "paperwalls", "user": "bobbytables"}).Error("this is an error")
+	c.Flush()
+
+	assert.Len(t, b.payloads, 1)
+	notice := convertToNotice(b.payloads[0])
+	assert.Equal(t, "this is an error", notice.ErrorMessage)
+	assert.Equal(t, "bobbytables", notice.Context["user"])
+	assert.Empty(t, notice.Context["error"])
+	assert.Empty(t, notice.Context["host"])
+}
+
 func convertToNotice(p honeybadger.Payload) *honeybadger.Notice {
 	return p.(*honeybadger.Notice)
 }
 
-func setup() (*testBackend, *honeybadger.Client, *logrus.Logger) {
+func setup() (*testBackend, *honeybadger.Client, *logrus.Logger, *Hook) {
 	b := newTestBackend()
 	c := honeybadger.New(honeybadger.Configuration{Backend: b})
-	hook := &Hook{Client: c}
+	hook := NewHook(c)
 	l := logrus.New()
 	l.Out = ioutil.Discard
 	l.Hooks.Add(hook)
 
-	return b, c, l
+	return b, c, l, hook
 }
