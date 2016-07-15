@@ -61,7 +61,9 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 		hbCtx[key] = value
 	}
 
-	_, err := h.Client.Notify(msg, hbCtx)
+	hbFin := honeybadger.Fingerprint{msg}
+	_, err := h.Client.Notify(msg, hbCtx, hbFin)
+
 	return err
 }
 
